@@ -1,0 +1,4 @@
+train: /content/dataset/images/train
+val: /content/dataset/images/val
+nc: 2  # number of classes (bus and route_number)
+names: ['bus', 'route_number']
