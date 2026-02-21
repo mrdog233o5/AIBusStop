@@ -119,7 +119,7 @@ class AIBusStop:
 
 def main():
     # Start in collect mode (you can change to "detect" after training)
-    busStop = AIBusStop(mode="collect")
+    busStop = AIBusStop(mode="detect")
     while busStop.update():
         pass
     busStop.cleanup()
