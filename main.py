@@ -3,7 +3,7 @@ import os
 import glob
 
 class CONFIG:
-    CAM_NUM = 0
+    CAM_NUM = 1
     WIDTH = 720
     HEIGHT = 720
     DATASET_PATH = "dataset"
