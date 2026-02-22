@@ -6,7 +6,7 @@ import easyocr
 
 class CONFIG:
     # Camera settings
-    CAM_NUM = 1
+    CAM_NUM = 0
     WIDTH = 720
     HEIGHT = 720
     DATASET_PATH = "dataset"
@@ -119,7 +119,7 @@ class AIBusStop:
 
 def main():
     # Start in collect mode (you can change to "detect" after training)
-    busStop = AIBusStop(mode="detect")
+    busStop = AIBusStop(mode="collect")
     while busStop.update():
         pass
     busStop.cleanup()
