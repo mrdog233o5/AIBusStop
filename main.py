@@ -14,7 +14,7 @@ class CONFIG:
     # Detection settings (set after training)
     MODEL_PATH = "best.pt"          # Your trained model
     USE_OCR = True                   # Enable route number reading
-    CONF_THRESHOLD = 0.5             # Minimum confidence for detections
+    CONF_THRESHOLD = 0.7             # Minimum confidence for detections
 
 class Sampler:
     def __init__(self):
@@ -78,7 +78,7 @@ class AIBusStop:
             cv2.imshow('Bus Camera Test', self.frame)
         else:
             # Run detection
-            results = self.model(self.frame, conf=CONFIG.CONF_THRESHOLD, conf=0.7)[0]
+            results = self.model(self.frame, conf=CONFIG.CONF_THRESHOLD)[0]
             annotated = results.plot()  # draws boxes with labels
 
             # If OCR is enabled, crop each route_number and read it
