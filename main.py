@@ -78,7 +78,7 @@ class AIBusStop:
             cv2.imshow('Bus Camera Test', self.frame)
         else:
             # Run detection
-            results = self.model(self.frame, conf=CONFIG.CONF_THRESHOLD)[0]
+            results = self.model(self.frame, conf=CONFIG.CONF_THRESHOLD, conf=0.7)[0]
             annotated = results.plot()  # draws boxes with labels
 
             # If OCR is enabled, crop each route_number and read it
@@ -119,7 +119,7 @@ class AIBusStop:
 
 def main():
     # Start in collect mode (you can change to "detect" after training)
-    busStop = AIBusStop(mode="collect")
+    busStop = AIBusStop(mode="detect")
     while busStop.update():
         pass
     busStop.cleanup()
