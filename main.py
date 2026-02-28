@@ -17,7 +17,7 @@ class CONFIG:
     CONF_THRESHOLD = 0.5             # YOLO confidence threshold
 
     # OCR settings (new)
-    OCR_CONF_THRESHOLD = 0.4          # Minimum confidence for OCR result
+    OCR_CONF_THRESHOLD = 0.3          # Minimum confidence for OCR result
     PREPROCESS_OCR = True              # Enable preprocessing (resize, threshold)
     OCR_RESIZE_FACTOR = 2               # How much to enlarge the cropped image
     OCR_THRESHOLD_VALUE = 120           # Threshold value for binary conversion
@@ -156,7 +156,7 @@ class AIBusStop:
         cv2.destroyAllWindows()
 
 def main():
-    busStop = AIBusStop(mode="detect")
+    busStop = AIBusStop(mode="collect")
     while busStop.update():
         pass
     busStop.cleanup()
