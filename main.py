@@ -22,7 +22,6 @@ class CONFIG:
 
     SAVE_CROP_IMAGES = False
 
-    # HEADLESS MODE: set True to disable all GUI windows
     HEADLESS = False
 
 class Sampler:
@@ -152,19 +151,15 @@ class AIBusStop:
                         cv2.putText(annotated, display_text, (x1, y1-10),
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
 
-            # --- NEW: Print and display buses with letters A, B, C... ---
             if current_numbers:
-                current_numbers.sort(key=lambda x: x[0])  # sort left to right
-                # Create list like ["A-23", "B-5X", ...]
+                current_numbers.sort(key=lambda x: x[0])
                 lettered_order = [f"{chr(65+i)}-{text}" for i, (_, text) in enumerate(current_numbers)]
-                order_line = " ".join(lettered_order)
-                print(order_line)   # to console
+                order_line = "\t".join(lettered_order)
+                print(order_line)
 
-                # Also display on the frame (if not headless)
                 if not CONFIG.HEADLESS:
                     cv2.putText(annotated, order_line, (10, 30),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 0), 2)
-            # ---------------------------------------------------------
 
             now = time.time()
             to_remove = [route for route, last in self.bus_last_seen.items() if now - last > self.seen_timeout]
@@ -175,7 +170,6 @@ class AIBusStop:
             if not CONFIG.HEADLESS:
                 cv2.imshow('Bus Detection', annotated)
 
-        # Key handling (only if not headless)
         if not CONFIG.HEADLESS:
             key = cv2.waitKey(1) & 0xFF
             if key == ord('q'):
@@ -202,9 +196,7 @@ class AIBusStop:
             elif self.mode == "collect" and key == 32:
                 self.sampler.capturePhoto(self)
         else:
-            # In headless mode, control frame rate and allow graceful exit
-            time.sleep(0.03)  # ~30 fps
-            # To stop, press Ctrl+C
+            time.sleep(0.03)
 
         return True
 
