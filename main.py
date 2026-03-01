@@ -20,7 +20,9 @@ class CONFIG:
     OCR_RESIZE_FACTOR = 2
     OCR_THRESHOLD_VALUE = 60
 
-    SAVE_CROP_IMAGES = False          # Set to True only for debugging
+    SAVE_CROP_IMAGES = False
+
+    # HEADLESS MODE: set True to disable all GUI windows
     HEADLESS = True
 
 class Sampler:
@@ -32,10 +34,11 @@ class Sampler:
         filepath = os.path.join(CONFIG.DATASET_PATH, filename)
         cv2.imwrite(filepath, app.frame)
         self.image_count += 1
-        cv2.putText(app.frame, "CAPTURED!", (50, 50),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        cv2.imshow('Bus Camera Test', app.frame)
-        cv2.waitKey(300)
+        if not CONFIG.HEADLESS:
+            cv2.putText(app.frame, "CAPTURED!", (50, 50),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            cv2.imshow('Bus Camera Test', app.frame)
+            cv2.waitKey(300)
 
     def get_next_image_number(self, prefix):
         pattern = os.path.join(CONFIG.DATASET_PATH, f"{prefix}*.jpg")
@@ -77,12 +80,8 @@ class AIBusStop:
             self.sampler = None
 
     def normalise_ocr_text(self, raw_text):
-        """Clean OCR output: keep only letters/digits, uppercase, and fix common errors."""
         clean = ''.join(c for c in raw_text if c.isalnum()).upper()
-        corrections = {
-            "S": "5",
-            "O": "0",
-        }
+        corrections = {"S": "5", "O": "0"}
         return corrections.get(clean, clean)
 
     def preprocess_for_ocr(self, crop, timestamp, idx):
@@ -105,18 +104,18 @@ class AIBusStop:
             return False
 
         if self.mode == "collect":
-            cv2.imshow('Bus Camera Test', self.frame)
+            if not CONFIG.HEADLESS:
+                cv2.imshow('Bus Camera Test', self.frame)
         else:
-            # Run detection with verbose=False to suppress YOLO logs
             results = self.model(self.frame, conf=CONFIG.CONF_THRESHOLD, verbose=False)[0]
             annotated = results.plot()
 
-            current_numbers = []   # (x_center, text)
+            current_numbers = []
 
             if CONFIG.USE_OCR and self.reader:
                 for idx, box in enumerate(results.boxes):
                     cls = int(box.cls[0])
-                    if cls == 1:  # route_number class
+                    if cls == 1:
                         x1, y1, x2, y2 = map(int, box.xyxy[0])
                         x_center = (x1 + x2) // 2
                         crop = self.frame[y1:y2, x1:x2]
@@ -134,14 +133,13 @@ class AIBusStop:
 
                         ocr_result = self.reader.readtext(processed_crop)
 
-                        # Default display values
                         display_text = "?"
                         color = (0, 0, 255)
 
                         if ocr_result and ocr_result[0][2] > CONFIG.OCR_CONF_THRESHOLD:
                             raw_text = ocr_result[0][1]
                             text = self.normalise_ocr_text(raw_text)
-                            if text:  # only use if cleaning produced something
+                            if text:
                                 display_text = f"{text} ({ocr_result[0][2]:.2f})"
                                 color = (0, 255, 0)
                                 current_numbers.append((x_center, text))
@@ -154,58 +152,67 @@ class AIBusStop:
                         cv2.putText(annotated, display_text, (x1, y1-10),
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
 
-            # Print left‑to‑right order for this frame
             if current_numbers:
                 current_numbers.sort(key=lambda x: x[0])
                 order_line = " ".join(text for _, text in current_numbers)
                 print(order_line)
 
-            # Remove old buses (silent)
             now = time.time()
             to_remove = [route for route, last in self.bus_last_seen.items() if now - last > self.seen_timeout]
             for route in to_remove:
                 del self.bus_log[route]
                 del self.bus_last_seen[route]
 
-            cv2.imshow('Bus Detection', annotated)
+            if not CONFIG.HEADLESS:
+                cv2.imshow('Bus Detection', annotated)
 
-        key = cv2.waitKey(1) & 0xFF
-        if key == ord('q'):
-            return False
-        elif key == ord('m'):
-            self.mode = "detect" if self.mode == "collect" else "collect"
-            if self.mode == "detect" and self.model is None:
-                self.model = YOLO(CONFIG.MODEL_PATH)
-                if CONFIG.USE_OCR:
-                    self.reader = easyocr.Reader(['en'], verbose=False)
-            return True
-        elif key == ord('o'):
-            if self.mode == "detect":
-                if not self.bus_log:
-                    print("No buses have been detected yet.")
+        # Key handling (only if not headless)
+        if not CONFIG.HEADLESS:
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord('q'):
+                return False
+            elif key == ord('m'):
+                self.mode = "detect" if self.mode == "collect" else "collect"
+                if self.mode == "detect" and self.model is None:
+                    self.model = YOLO(CONFIG.MODEL_PATH)
+                    if CONFIG.USE_OCR:
+                        self.reader = easyocr.Reader(['en'], verbose=False)
+                return True
+            elif key == ord('o'):
+                if self.mode == "detect":
+                    if not self.bus_log:
+                        print("No buses have been detected yet.")
+                    else:
+                        sorted_buses = sorted(self.bus_log.items(), key=lambda x: x[1])
+                        print("\n--- Bus Arrival Order ---")
+                        for idx, (route, first_time) in enumerate(sorted_buses, 1):
+                            print(f"{idx}. Route {route} at {time.ctime(first_time)}")
+                        print("------------------------")
                 else:
-                    sorted_buses = sorted(self.bus_log.items(), key=lambda x: x[1])
-                    print("\n--- Bus Arrival Order ---")
-                    for idx, (route, first_time) in enumerate(sorted_buses, 1):
-                        print(f"{idx}. Route {route} at {time.ctime(first_time)}")
-                    print("------------------------")
-            else:
-                print("Order only available in detect mode")
-        elif self.mode == "collect" and key == 32:
-            self.sampler.capturePhoto(self)
+                    print("Order only available in detect mode")
+            elif self.mode == "collect" and key == 32:
+                self.sampler.capturePhoto(self)
+        else:
+            # In headless mode, control frame rate and allow graceful exit
+            time.sleep(0.03)  # ~30 fps
+            # To stop, press Ctrl+C
 
         return True
 
     def cleanup(self):
         self.cap.release()
-        cv2.destroyAllWindows()
+        if not CONFIG.HEADLESS:
+            cv2.destroyAllWindows()
 
 def main():
     busStop = AIBusStop(mode="detect")
-    while busStop.update():
-        pass
-    busStop.cleanup()
+    try:
+        while busStop.update():
+            pass
+    except KeyboardInterrupt:
+        print("\nStopped by user")
+    finally:
+        busStop.cleanup()
 
 if __name__ == "__main__":
     main()
-
