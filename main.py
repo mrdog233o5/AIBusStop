@@ -21,6 +21,7 @@ class CONFIG:
     OCR_THRESHOLD_VALUE = 60
 
     SAVE_CROP_IMAGES = False          # Set to True only for debugging
+    HEADLESS = True
 
 class Sampler:
     def __init__(self):
